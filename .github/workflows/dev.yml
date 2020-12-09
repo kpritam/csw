@@ -5,12 +5,7 @@ on:
     branches: [ master ]
   push:
     branches: [ master ]
-    paths-ignore:
-      - "scripts/**"
-      - "tools/**"
-      - "jenkins/**"
-      - "notes/**"
-
+    
 jobs:
   unit-tests:
     runs-on: ubuntu-18.04
@@ -25,8 +20,6 @@ jobs:
 
       - name: Configure ntp time
         run: |
-          sudo apt-get update -y
-          curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
           sudo apt-get install ntp -y
           sudo ntptime -T 37
 
@@ -47,12 +40,12 @@ jobs:
 
       - name: Upload RTM
         if: always()
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
           name: RTM
           path: target/RTM
 
-      - uses: actions/upload-artifact@v1
+      - uses: actions/upload-artifact@v2
         with:
           name: Coverage Report
           path: target/scala-2.13/scoverage-report
@@ -77,36 +70,3 @@ jobs:
 
       - name: Multi-Jvm Tests
         run: sbt -DenableFatalWarnings=true -DgenerateStoryReport=true 'integration/multi-jvm:test'
-
-  slack-success:
-    needs: [ unit-tests, multi-jvm-tests ]
-    if: success()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: kpritam/slack-job-status-action@v1
-        with:
-          job-status: Success
-          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-          channel: ci-dev
-
-  slack-failure:
-    needs: [ unit-tests, multi-jvm-tests ]
-    if: failure()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: kpritam/slack-job-status-action@v1
-        with:
-          job-status: Failure
-          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-          channel: ci-dev
-
-  slack-cancelled:
-    needs: [ unit-tests, multi-jvm-tests ]
-    if: cancelled()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: kpritam/slack-job-status-action@v1
-        with:
-          job-status: Cancelled
-          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-          channel: ci-dev

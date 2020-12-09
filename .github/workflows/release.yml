@@ -28,21 +28,13 @@ jobs:
 
       - name: Configure ntp time
         run: |
-          sudo apt-get update -y
-          curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
           sudo apt-get install ntp -y
           sudo ntptime -T 37
 
-      - name: Build
-        run: |
-          sbtn test:compile
-          sbtn multi-jvm:compile
-          sbtn makeSite
-
       - name: Unit and Component Tests
         run: |
-          sbt -DenableCoverage=true -DgenerateStoryReport=true csw-time/test:test
-          sbt -DenableCoverage=true -DgenerateStoryReport=true -DdisableTimeTests test:test
+          sbt -DenableFatalWarnings=true -Dakka.actor.serialize-messages=on -DenableCoverage=true -DgenerateStoryReport=true 'csw-time/test:test'
+          sbt -DenableFatalWarnings=true -Dakka.actor.serialize-messages=on -DenableCoverage=true -DgenerateStoryReport=true -DdisableTimeTests 'test:test'
 
       - name: Coverage Report
         run: |
@@ -68,32 +60,10 @@ jobs:
 
       - name: Upload RTM
         if: always()
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2
         with:
           name: RTM
           path: target/RTM
 
-      - name: Github Release
-        run: sbt -Dprod.publish=true githubRelease
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-
-      - name: Docs Publish
-        run: |
-          echo 'echo $RELEASE_TOKEN' > /tmp/.git-askpass
-          chmod +x /tmp/.git-askpass
-          git config --global user.email "actions@github.com"
-          git config --global user.name "Github Action"
-          sbt -Dprod.publish=true clean ghpagesPushSite
-        env:
-          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-          GIT_ASKPASS: /tmp/.git-askpass
-
-      - name: Notify slack
-        if: always()
-        continue-on-error: true
-        uses: kpritam/slack-job-status-action@v1
-        with:
-          job-status: ${{ job.status }}
-          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-          channel: ci-release
+      - name: Make Site
+        run: sbtn makeSite
